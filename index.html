@@ -1,269 +1,39 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Aggiungi testo al render</title>
+  <meta charset="UTF-8">
+  <title>Serafini Me.da</title>
   <style>
-    :root{
-      --bg:#111;
-      --panel: rgba(255,255,255,0.06);
-      --accent: #6b5cff;
-      --text: #fff;
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
     }
-    html,body{height:100%;margin:0;font-family:Inter, "Helvetica Neue", Arial, sans-serif;background:var(--bg);color:var(--text)}
-    .wrap{max-width:1100px;margin:24px auto;padding:20px;display:grid;gap:16px}
-    .topbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .btn,input,select{background:var(--panel);color:var(--text);border:1px solid rgba(255,255,255,0.06);padding:8px 10px;border-radius:8px}
-    label{font-size:13px;}
-    .canvas-wrap{background:#000;padding:12px;border-radius:8px;display:flex;justify-content:center;align-items:center}
-    canvas{max-width:100%;height:auto;border-radius:4px;box-shadow:0 8px 30px rgba(0,0,0,0.6)}
-    .controls{display:flex;gap:8px;align-items:center}
-    .range{width:160px}
-    .small{font-size:13px;opacity:0.9}
-    footer{font-size:13px;color:rgba(255,255,255,0.6);margin-top:6px}
+    body {
+      /* Assicurati che il nome dell'immagine corrisponda */
+      background: url('sfondo.jpg') no-repeat center center fixed;
+      background-size: cover;
+      height: 100%;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .center-text {
+      background: rgba(255,255,255,0.85);
+      padding: 40px 70px;
+      border-radius: 16px;
+      font-size: 2em;
+      font-family: 'Arial', sans-serif;
+      color: #222;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.18);
+      text-align: center;
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="topbar">
-      <label class="btn">
-        Carica immagine
-        <input id="file" type="file" accept="image/*" style="display:none">
-      </label>
-
-      <button id="useDefault" class="btn">Usa immagine predefinita (image.jpg)</button>
-
-      <div style="display:flex;align-items:center;gap:8px;margin-left:6px;">
-        <label class="small">Dimensione testo</label>
-        <input id="size" class="range" type="range" min="12" max="180" value="48">
-        <span id="sizeVal" class="small">48</span>px
-      </div>
-
-      <div style="display:flex;align-items:center;gap:8px;margin-left:8px;">
-        <label class="small">Colore</label>
-        <input id="color" type="color" value="#ffffff" class="btn" style="padding:6px;">
-      </div>
-
-      <div class="controls" style="margin-left:auto">
-        <button id="apply" class="btn">Applica testo</button>
-        <button id="download" class="btn">Scarica render</button>
-        <button id="reset" class="btn">Ripristina</button>
-      </div>
-    </div>
-
-    <div class="canvas-wrap" aria-live="polite">
-      <canvas id="canvas" width="800" height="800"></canvas>
-    </div>
-
-    <div class="small">
-      Testo che verrà aggiunto: <strong>Serafini Me.da (il puntino è una R)</strong>
-    </div>
-
-    <footer>Carica la tua immagine oppure salva un file chiamato "image.jpg" nella stessa cartella di questo file per usarlo come predefinita. Poi clicca "Applica testo" per inserirlo al centro e "Scarica render" per salvare il risultato come PNG.</footer>
+  <div class="center-text">
+    Serafini Me.da (il punto sta per una R)
   </div>
-
-  <script>
-    // Testo fisso richiesto
-    const TEXT = "Serafini Me.da (il puntino è una R)";
-
-    const fileInput = document.getElementById('file');
-    const useDefaultBtn = document.getElementById('useDefault');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d', { alpha: false });
-    const sizeInput = document.getElementById('size');
-    const sizeVal = document.getElementById('sizeVal');
-    const colorInput = document.getElementById('color');
-    const applyBtn = document.getElementById('apply');
-    const downloadBtn = document.getElementById('download');
-    const resetBtn = document.getElementById('reset');
-
-    let img = new Image();
-    let originalSrc = 'image.jpg'; // percorso predefinito: salva la tua immagine con questo nome nella stessa cartella
-    let currentSrc = originalSrc;
-    let hasImage = false;
-    let lastState = null; // per ripristino
-
-    // Utility: ridimensiona canvas tenendo conto del devicePixelRatio per immagini nitide
-    function setCanvasSize(w, h) {
-      const dpr = Math.max(window.devicePixelRatio || 1, 1);
-      canvas.width = Math.round(w * dpr);
-      canvas.height = Math.round(h * dpr);
-      canvas.style.width = Math.min(w, 1080) + 'px'; // visual cap
-      canvas.style.height = (h * (parseFloat(canvas.style.width) / w)) + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-
-    function clearCanvas() {
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-    }
-
-    function drawBaseImage() {
-      if (!hasImage) {
-        // placeholder grey
-        const W = 800, H = 600;
-        setCanvasSize(W,H);
-        ctx.fillStyle = '#222';
-        ctx.fillRect(0,0,W,H);
-        ctx.fillStyle = '#666';
-        ctx.font = '20px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('Nessuna immagine caricata', W/2, H/2);
-        return;
-      }
-      const W = img.naturalWidth || img.width;
-      const H = img.naturalHeight || img.height;
-
-      // limiter per immagini molto grandi
-      const maxDim = 2500;
-      let scale = 1;
-      if (Math.max(W,H) > maxDim) scale = maxDim / Math.max(W,H);
-      const w = Math.round(W * scale);
-      const h = Math.round(H * scale);
-
-      setCanvasSize(w,h);
-
-      ctx.drawImage(img, 0, 0, w, h);
-      // salva stato iniziale (prima del testo)
-      lastState = ctx.getImageData(0,0,w,h);
-    }
-
-    // Disegna il testo al centro con sfondo semi-trasparente
-    function drawTextOntoCanvas() {
-      if (!hasImage) return;
-      // ripristina image
-      ctx.putImageData(lastState, 0, 0);
-
-      const W = canvas.width / (window.devicePixelRatio || 1);
-      const H = canvas.height / (window.devicePixelRatio || 1);
-
-      // impostazioni testo
-      const requestedSize = parseInt(sizeInput.value, 10);
-      const font = `${requestedSize}px "Helvetica Neue", Arial, sans-serif`;
-      ctx.font = font;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      // misura
-      const metrics = ctx.measureText(TEXT);
-      const textWidth = metrics.width;
-      const padding = Math.max(12, requestedSize * 0.35);
-
-      // posizione (centro)
-      const cx = W / 2;
-      const cy = H / 2;
-
-      // rettangolo di sfondo (con angoli arrotondati disegnati come path)
-      const rectW = textWidth + padding * 2;
-      const rectH = requestedSize + padding;
-      const radius = Math.min(18, rectH * 0.25);
-
-      // sfondo semitrasparente per garantire leggibilità
-      ctx.fillStyle = 'rgba(0,0,0,0.45)';
-      roundRect(ctx, cx - rectW/2, cy - rectH/2, rectW, rectH, radius);
-      ctx.fill();
-
-      // testo
-      ctx.fillStyle = colorInput.value;
-      // leggero bordo per maggiore contrasto
-      ctx.lineWidth = Math.max(2, requestedSize * 0.06);
-      ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-      ctx.strokeText(TEXT, cx, cy);
-      ctx.fillText(TEXT, cx, cy);
-    }
-
-    // fun helper per rettangolo arrotondato
-    function roundRect(ctx, x, y, w, h, r) {
-      ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.arcTo(x + w, y, x + w, y + h, r);
-      ctx.arcTo(x + w, y + h, x, y + h, r);
-      ctx.arcTo(x, y + h, x, y, r);
-      ctx.arcTo(x, y, x + w, y, r);
-      ctx.closePath();
-    }
-
-    // Eventi
-    fileInput.addEventListener('change', (ev) => {
-      const f = ev.target.files && ev.target.files[0];
-      if (!f) return;
-      const url = URL.createObjectURL(f);
-      loadImage(url, () => {
-        URL.revokeObjectURL(url);
-      });
-    });
-
-    useDefaultBtn.addEventListener('click', () => {
-      loadImage(originalSrc);
-    });
-
-    applyBtn.addEventListener('click', () => {
-      if (!hasImage) {
-        alert('Carica prima un\'immagine o posiziona un file chiamato "image.jpg" nella cartella.');
-        return;
-      }
-      drawTextOntoCanvas();
-    });
-
-    downloadBtn.addEventListener('click', () => {
-      if (!hasImage) {
-        alert('Niente da scaricare: carica prima l\'immagine.');
-        return;
-      }
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          alert('Errore durante la creazione del file.');
-          return;
-        }
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'render.png';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
-      }, 'image/png');
-    });
-
-    resetBtn.addEventListener('click', () => {
-      if (!hasImage) return;
-      ctx.putImageData(lastState, 0, 0);
-    });
-
-    sizeInput.addEventListener('input', () => {
-      sizeVal.textContent = sizeInput.value;
-    });
-
-    colorInput.addEventListener('input', () => {
-      if (!hasImage) return;
-      ctx.putImageData(lastState, 0, 0);
-      drawTextOntoCanvas();
-    });
-
-    // Carica un'immagine e disegna sul canvas
-    function loadImage(src, cb) {
-      const temp = new Image();
-      temp.crossOrigin = "anonymous";
-      temp.onload = () => {
-        img = temp;
-        hasImage = true;
-        currentSrc = src;
-        drawBaseImage();
-        cb && cb();
-      };
-      temp.onerror = () => {
-        alert('Impossibile caricare l\'immagine: verifica il percorso o il file.');
-        cb && cb();
-      };
-      temp.src = src;
-    }
-
-    (function init(){
-      loadImage(originalSrc, () => {
-        if (!hasImage) drawBaseImage();
-      });
-    })();
-  </script>
 </body>
 </html>
